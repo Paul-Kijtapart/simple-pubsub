@@ -1,11 +1,11 @@
 import {
+    EventType,
     Machine,
-    MachineRefillEvent,
-    MachineSaleEvent,
-    MachineSaleSubscriber,
-    MachineRefillSubscriber,
     MachinePublishSubscribeService,
-    EventType
+    MachineRefillEvent,
+    MachineRefillSubscriber,
+    MachineSaleEvent,
+    MachineSaleSubscriber
 } from "./app.ts";
 
 describe('Machine', () => {
@@ -98,11 +98,12 @@ describe('MachineSubscriber', () => {
 });
 
 describe('MachinePublishSubscribeService', () => {
-    test('Should be able to subscribe different types of subscribers', () => {
+    test('Should be able to subscribe/unsubscribe different types of subscribers', () => {
         const machines = [new Machine('002'), new Machine('003')];
         const saleSubscriber1 = new MachineSaleSubscriber(machines);
         const saleSubscriber2 = new MachineSaleSubscriber(machines);
         const refillSubscriber = new MachineRefillSubscriber(machines);
+        const refillSubscriber2 = new MachineRefillSubscriber(machines);
         const pubSubService = new MachinePublishSubscribeService();
 
         expect(pubSubService.getSubscriberCount()).toEqual(0)
@@ -110,8 +111,14 @@ describe('MachinePublishSubscribeService', () => {
         pubSubService.subscribe(EventType.Sale, saleSubscriber1)
         pubSubService.subscribe(EventType.Sale, saleSubscriber2)
         pubSubService.subscribe(EventType.Refill, refillSubscriber)
+        pubSubService.subscribe(EventType.Refill, refillSubscriber2)
 
-        expect(pubSubService.getSubscriberCount()).toEqual(3)
+        expect(pubSubService.getSubscriberCount()).toEqual(4)
+
+        pubSubService.unsubscribe(EventType.Refill, refillSubscriber);
+        pubSubService.unsubscribe(EventType.Sale, saleSubscriber1);
+
+        expect(pubSubService.getSubscriberCount()).toEqual(2)
     });
 
     test('Should be able to publish MachineSaleEvent to subscribers', () => {

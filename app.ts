@@ -16,8 +16,8 @@ interface ISubscriber {
 
 interface IPublishSubscribeService {
   publish (event: IEvent): void;
-  subscribe (type: string, handler: ISubscriber): void;
-  // unsubscribe ( /* Question 2 - build this feature */ );
+  subscribe (type: EventType, handler: ISubscriber): void;
+  unsubscribe ( type: EventType, handler: ISubscriber): void
 }
 
 interface MachineMap {
@@ -166,9 +166,16 @@ class MachinePublishSubscribeService implements IPublishSubscribeService {
     }
   }
 
-  subscribe(type: string, handler: ISubscriber) {
+  subscribe(type: EventType, handler: ISubscriber) {
     // { 'sale' : [ saleSubscriber1, saleSubscriber2 ]
     this.iSubscribers[type].push(handler)
+  }
+
+  unsubscribe(type: EventType, handler: ISubscriber) {
+    const index = this.iSubscribers[type].indexOf(handler);
+    if (index > -1) {
+      this.iSubscribers[type].splice(index, 1);
+    }
   }
 }
 

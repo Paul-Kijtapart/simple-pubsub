@@ -3,6 +3,8 @@ import {
     Machine,
     MachinePublishSubscribeService,
     MachineRefillEvent,
+    MachineLowStockWarningEvent,
+    MachineStockLevelOkEvent,
     MachineRefillSubscriber,
     MachineSaleEvent,
     MachineSaleSubscriber
@@ -35,6 +37,24 @@ describe('MachineEvent', () => {
         const mr = new MachineRefillEvent(testRefillQuanity, testMachineId);
 
         expect(mr.getRefillQuantity()).toEqual(testRefillQuanity)
+        expect(mr.machineId()).toEqual(testMachineId)
+    });
+
+    test('Should be able to create a MachineLowStockWarningEvent', () => {
+        const testMachineId = '002';
+
+        const mr = new MachineLowStockWarningEvent(testMachineId);
+
+        expect(mr.type()).toEqual(EventType.Low)
+        expect(mr.machineId()).toEqual(testMachineId)
+    });
+
+    test('Should be able to create a MachineStockLevelOkEvent', () => {
+        const testMachineId = '002';
+
+        const mr = new MachineStockLevelOkEvent(testMachineId);
+
+        expect(mr.type()).toEqual(EventType.Ok)
         expect(mr.machineId()).toEqual(testMachineId)
     });
 });

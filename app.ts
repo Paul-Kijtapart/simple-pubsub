@@ -2,6 +2,12 @@
 enum EventType {
   Sale = 'sale',
   Refill = 'refill',
+  Low = 'low',
+  Ok = 'ok'
+}
+
+enum StockLevel {
+  Ok = 3  // threshold to generate warning events
 }
 
 // interfaces
@@ -83,6 +89,28 @@ class MachineRefillEvent extends BaseMachineEvent {
     return `${this.constructor.name}(type=${this.type()},machineId=${this.machineId()},refill=${this.getRefillQuantity()})`
   }
 }
+
+class MachineLowStockWarningEvent extends BaseMachineEvent {
+  constructor(machineId: string) {
+    super(machineId);
+  }
+
+  type(): EventType {
+    return EventType.Low
+  }
+}
+
+class MachineStockLevelOkEvent extends BaseMachineEvent {
+  constructor(machineId: string) {
+    super(machineId);
+  }
+
+  type(): EventType {
+    return EventType.Ok;
+  }
+}
+
+type TMachineWarningEvent = MachineLowStockWarningEvent | MachineStockLevelOkEvent;
 
 // subscribers
 abstract class BaseMachineSubscriber implements ISubscriber {

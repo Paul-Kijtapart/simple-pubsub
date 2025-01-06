@@ -96,11 +96,9 @@ const eventGenerator = (): IEvent => {
   return new MachineRefillEvent(refillQty, randomMachine());
 }
 
-
-// program
-(async () => {
+async function main() {
   // create 3 machines with a quantity of 10 stock
-  const machines: Machine[] = [ new Machine('001'), new Machine('002'), new Machine('003') ];
+  const machines: Machine[] = [new Machine('001'), new Machine('002'), new Machine('003')];
 
   // create a machine sale event subscriber. inject the machines (all subscribers should do this)
   const saleSubscriber = new MachineSaleSubscriber(machines);
@@ -113,4 +111,14 @@ const eventGenerator = (): IEvent => {
 
   // publish the events
   events.map(pubSubService.publish);
-})();
+}
+
+export {
+  main,
+  Machine,
+  MachineSaleEvent,
+  MachineRefillEvent,
+  MachineSaleSubscriber,
+  MachineRefillSubscriber,
+
+}

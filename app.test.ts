@@ -155,14 +155,40 @@ describe('MachinePublishSubscribeService', () => {
         pubSubService.subscribe(EventType.Refill, refillSubscriber3)
 
         const testRefillQty = 4;
+        const testRefillEvent = new MachineRefillEvent(testRefillQty, testMachine1.id);
+
+        expect(testMachine1.stockLevel).toEqual(10);
+        expect(testMachine2.stockLevel).toEqual(10);
+
+        pubSubService.publish(testRefillEvent);
+
+        expect(testMachine1.stockLevel).toEqual(10 + testRefillQty * 3);
+        expect(testMachine2.stockLevel).toEqual(10);
+    });
+
+    test('The subscribers should be working off a shared array of Machine objects, mutating them depending on the event received.', () => {
+        const testMachine1 = new Machine('001')
+        const testMachine2 = new Machine('002')
+        const machines = [testMachine1, new Machine('002')];
+        const saleSubscriber = new MachineSaleSubscriber(machines);
+        const refillSubscriber = new MachineRefillSubscriber(machines);
+        const pubSubService = new MachinePublishSubscribeService();
+        pubSubService.subscribe(EventType.Sale, saleSubscriber)
+        pubSubService.subscribe(EventType.Refill, refillSubscriber)
+
+        const testRefillQty = 4;
         const testSaleEvents = new MachineRefillEvent(testRefillQty, testMachine1.id);
+
+        const testSaleQty = 3;
+        const testRefillEvent = new MachineSaleEvent(testSaleQty, testMachine1.id);
 
         expect(testMachine1.stockLevel).toEqual(10);
         expect(testMachine2.stockLevel).toEqual(10);
 
         pubSubService.publish(testSaleEvents);
+        pubSubService.publish(testRefillEvent);
 
-        expect(testMachine1.stockLevel).toEqual(10 + testRefillQty * 3);
+        expect(testMachine1.stockLevel).toEqual(10 + testRefillQty - testSaleQty);
         expect(testMachine2.stockLevel).toEqual(10);
     });
 });

@@ -1,4 +1,4 @@
-Instructions
+# Instructions
 1. Build the Publish-Subscribe mechanism. Allow ISubscriber objects to register against an concrete IPublishSubscribeService object for an event type. Implement the publish method so that when a publish event occurs, all subscribers of that the event type published will have a chance to handle the event. The subscribers should be working off a shared array of Machine objects, mutating them depending on the event received.
 2. Now add the method 'unsubscribe' on IPublishSubscribeService to allow handlers to unsubscribe from events. You may change the existing method signatures.
 3. Implement MachineRefillSubscriber. It will increase the stock quantity of the machine.
@@ -18,3 +18,28 @@ Additional credit for using useful abstractions that add to the codebase. This i
 (iii) and more
 
 Please share your work using a GitHub repository with @proftom and @Gnoyoyo.
+
+# Paul Note
+To make it easier to see the result of my solution. I put together a list of commands you can run to validate my implementation.
+
+## Commands
+Ensure you've installed the dependencies
+```shell
+npm install
+```
+
+To run the asked command
+
+```shell
+npm run app
+```
+
+Running all unit tests
+
+```shell
+npm run test
+```
+
+
+## Some worth-noting edits on the given code
+* The handler method of the MachineSaleSubscriber is changed to work with the machine of the event it consumes. I believe the original fixed index does not make sense.

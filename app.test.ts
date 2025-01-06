@@ -55,6 +55,20 @@ describe('MachineSubscriber', () => {
         expect(test_machine.stockLevel).toEqual(10 - soldAmount)
     });
 
+    test('MachineSaleSubscriber should not make stockLevel go negative', () => {
+        const test_machine = new Machine('001')
+        const machines: Machine[] = [test_machine, new Machine('002'), new Machine('003')];
+        const exceededSoldAmount = 20;
+        const testSaleSubscriber = new MachineSaleSubscriber(machines);
+        const testSaleEvent = new MachineSaleEvent(exceededSoldAmount, test_machine.id)
+
+        expect(test_machine.stockLevel).toEqual(10)
+
+        testSaleSubscriber.handle(testSaleEvent);
+
+        expect(test_machine.stockLevel).toEqual(0)
+    });
+
     test('Should be able to create a MachineRefillSubscriber', () => {
         const test_machine = new Machine('001')
         const machines: Machine[] = [test_machine, new Machine('002'), new Machine('003')];

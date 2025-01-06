@@ -223,12 +223,14 @@ async function main() {
   // create a machine sale event subscriber. inject the machines (all subscribers should do this)
   const saleSubscriber = new MachineSaleSubscriber(machines);
   const saleSubscriber2 = new MachineSaleSubscriber(machines);
+  const saleSubscriber3 = new MachineSaleSubscriber(machines);
   const refillSubscriber = new MachineRefillSubscriber(machines);
 
   // create the PubSub service
   const pubSubService: MachinePublishSubscribeService = new MachinePublishSubscribeService(); // implement and fix this
   pubSubService.subscribe(EventType.Sale, saleSubscriber)
   pubSubService.subscribe(EventType.Sale, saleSubscriber2)
+  pubSubService.subscribe(EventType.Sale, saleSubscriber3)
   pubSubService.subscribe(EventType.Refill, refillSubscriber)
 
   // create 5 random events

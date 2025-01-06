@@ -1,3 +1,9 @@
+// constants
+enum EventType {
+  Sale = 'sale',
+  Refill = 'refill',
+}
+
 // interfaces
 interface IEvent {
   type(): string;
@@ -15,7 +21,7 @@ interface IPublishSubscribeService {
 }
 
 
-// implementations
+// events
 class MachineSaleEvent implements IEvent {
   constructor(private readonly _sold: number, private readonly _machineId: string) {}
 
@@ -28,7 +34,7 @@ class MachineSaleEvent implements IEvent {
   }
 
   type(): string {
-    return 'sale';
+    return EventType.Sale;
   }
 }
 
@@ -36,14 +42,19 @@ class MachineRefillEvent implements IEvent {
   constructor(private readonly _refill: number, private readonly _machineId: string) {}
 
   machineId(): string {
-    throw new Error("Method not implemented.");
+    return this._machineId;
+  }
+
+  getRefillQuantity():number {
+    return this._refill;
   }
 
   type(): string {
-    throw new Error("Method not implemented.");
+    return EventType.Refill;
   }
 }
 
+// subscribers
 class MachineSaleSubscriber implements ISubscriber {
   public machines: Machine[];
 

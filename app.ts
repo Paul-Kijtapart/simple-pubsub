@@ -275,6 +275,10 @@ class MachineCollection {
     }
   }
 
+  getMachineCount(): number {
+    return Object.keys(this._machines).length;
+  }
+
   addMachine(machine: Machine): void {
     this._machines[machine.id] = machine;
   }

@@ -20,6 +20,24 @@ describe('Machine', () => {
     });
 });
 
+describe('MachineCollection', () => {
+    test('Should be able to create MachineCollection', () => {
+        const testMachine = new Machine('001')
+        const testMachine2 = new Machine('002')
+        const machines = [testMachine];
+
+        const mc = new MachineCollection(machines)
+
+        expect(mc.getMachineCount()).toEqual(1)
+        expect(mc.getMachineById(testMachine.id)).toEqual(testMachine);
+
+        mc.addMachine(testMachine2);
+
+        expect(mc.getMachineCount()).toEqual(2)
+        expect(mc.getMachineById(testMachine2.id)).toEqual(testMachine2);
+    });
+});
+
 describe('MachineEvent', () => {
     test('Should be able to create a MachineSaleEvent', () => {
         const testSoleQuantity = 3;

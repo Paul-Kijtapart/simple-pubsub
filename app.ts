@@ -7,7 +7,8 @@ enum EventType {
 }
 
 enum StockLevel {
-  Ok = 3  // threshold to generate warning events
+  Ok = 3,  // threshold to generate warning events
+  Default = 10
 }
 
 // interfaces
@@ -185,7 +186,7 @@ class MachineLowStockSubscriber extends BaseMachineSubscriber {
     // bring the stock level back to the default level when it hits the low threshold
     const machine = this.machines[event.machineId()];
     if (machine.stockLevel < StockLevel.Ok) {
-      machine.stockLevel = 10; // TODO: Add default to enum
+      machine.stockLevel = StockLevel.Default; // TODO: Add default to enum
     }
   }
 }
@@ -252,7 +253,7 @@ class Machine {
   public stockLevel: number;
   public id: string;
 
-  constructor(id: string, stockLevel: number = 10) {
+  constructor(id: string, stockLevel: number = StockLevel.Default) {
     this.id = id;
     this.stockLevel = stockLevel;
   }

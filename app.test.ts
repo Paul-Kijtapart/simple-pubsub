@@ -8,7 +8,8 @@ import {
     MachineStockLevelOkEvent,
     MachineRefillSubscriber,
     MachineSaleEvent,
-    MachineSaleSubscriber
+    MachineSaleSubscriber,
+    MachineCollection,
 } from "./app.ts";
 
 describe('Machine', () => {
@@ -16,6 +17,24 @@ describe('Machine', () => {
         const m1 = new Machine('001')
         expect(m1.stockLevel).toEqual(StockLevel.Default)
         expect(m1.id).toEqual('001')
+    });
+});
+
+describe('MachineCollection', () => {
+    test('Should be able to create MachineCollection', () => {
+        const testMachine = new Machine('001')
+        const testMachine2 = new Machine('002')
+        const machines = [testMachine];
+
+        const mc = new MachineCollection(machines)
+
+        expect(mc.getMachineCount()).toEqual(1)
+        expect(mc.getMachineById(testMachine.id)).toEqual(testMachine);
+
+        mc.addMachine(testMachine2);
+
+        expect(mc.getMachineCount()).toEqual(2)
+        expect(mc.getMachineById(testMachine2.id)).toEqual(testMachine2);
     });
 });
 
@@ -64,17 +83,19 @@ describe('MachineSubscriber', () => {
     let testMachine2: Machine;
     let testMachine3: Machine;
     let machines: Machine[];
+    let machineCollection: MachineCollection;
 
     beforeEach(() => {
         testMachine = new Machine('001');
         testMachine2 = new Machine('002');
         testMachine3 = new Machine('003');
         machines = [testMachine, testMachine2, testMachine3];
+        machineCollection = new MachineCollection(machines);
     });
 
     test('Should be able to create a MachineSaleSubscriber', () => {
         const soldAmount = 3;
-        const testSaleSubscriber = new MachineSaleSubscriber(machines, []);
+        const testSaleSubscriber = new MachineSaleSubscriber(machineCollection, []);
         const testSaleEvent = new MachineSaleEvent(soldAmount, testMachine.id)
 
         expect(testMachine.stockLevel).toEqual(StockLevel.Default)
@@ -87,7 +108,7 @@ describe('MachineSubscriber', () => {
     test('Should generate MachineLowStockWarningEvent when stockLevel drops below Ok level just once', () => {
         const soldAmount = 7;
         const warningEvents = [];
-        const testSaleSubscriber = new MachineSaleSubscriber(machines, warningEvents);
+        const testSaleSubscriber = new MachineSaleSubscriber(machineCollection, warningEvents);
         const testSaleEvent = new MachineSaleEvent(soldAmount, testMachine.id)
 
         expect(testMachine.stockLevel).toEqual(StockLevel.Default)
@@ -112,7 +133,7 @@ describe('MachineSubscriber', () => {
     test('MachineSaleSubscriber should not make stockLevel go negative', () => {
         const exceededSoldAmount = 20;
         const warningEvents = [];
-        const testSaleSubscriber = new MachineSaleSubscriber(machines, warningEvents);
+        const testSaleSubscriber = new MachineSaleSubscriber(machineCollection, warningEvents);
         const testSaleEvent = new MachineSaleEvent(exceededSoldAmount, testMachine.id)
 
         expect(testMachine.stockLevel).toEqual(StockLevel.Default)
@@ -126,7 +147,7 @@ describe('MachineSubscriber', () => {
 
     test('Should be able to create a MachineRefillSubscriber', () => {
         const refillAmount = 5;
-        const testRefillSubscriber = new MachineRefillSubscriber(machines, []);
+        const testRefillSubscriber = new MachineRefillSubscriber(machineCollection, []);
         const testRefillEvent = new MachineRefillEvent(refillAmount, testMachine.id)
 
         expect(testMachine.stockLevel).toEqual(StockLevel.Default)
@@ -140,9 +161,10 @@ describe('MachineSubscriber', () => {
         const testStockLevel = StockLevel.Ok - 1;
         const testMachine = new Machine('001', testStockLevel)
         const machines: Machine[] = [testMachine, new Machine('002'), new Machine('003')];
+        const machineCollection: MachineCollection = new MachineCollection(machines);
         const refillAmount = 5;
         const warningEvents = [];
-        const testRefillSubscriber = new MachineRefillSubscriber(machines, warningEvents);
+        const testRefillSubscriber = new MachineRefillSubscriber(machineCollection, warningEvents);
         const testRefillEvent = new MachineRefillEvent(refillAmount, testMachine.id)
 
         expect(testMachine.stockLevel).toEqual(testStockLevel)
@@ -158,7 +180,7 @@ describe('MachineSubscriber', () => {
         const testMachine = new Machine('001')
         const machines: Machine[] = [testMachine, new Machine('002'), new Machine('003')];
         const soldAmount = 3;
-        const testRefillSubscriber = new MachineRefillSubscriber(machines, []);
+        const testRefillSubscriber = new MachineRefillSubscriber(machineCollection, []);
 
         const testSaleEvent = new MachineSaleEvent(soldAmount, testMachine.id)
 
@@ -174,20 +196,23 @@ describe('MachinePublishSubscribeService', () => {
     let testMachine2: Machine;
     let testMachine3: Machine;
     let machines: Machine[];
+    let machineCollection: MachineCollection;
+
 
     beforeEach(() => {
         testMachine = new Machine('001');
         testMachine2 = new Machine('002');
         testMachine3 = new Machine('003');
         machines = [testMachine, testMachine2, testMachine3];
+        machineCollection = new MachineCollection(machines);
     });
 
     test('Should be able to subscribe/unsubscribe different types of subscribers', () => {
         const warningEvents = [];
-        const saleSubscriber1 = new MachineSaleSubscriber(machines, warningEvents);
-        const saleSubscriber2 = new MachineSaleSubscriber(machines, warningEvents);
-        const refillSubscriber = new MachineRefillSubscriber(machines, warningEvents);
-        const refillSubscriber2 = new MachineRefillSubscriber(machines, warningEvents);
+        const saleSubscriber1 = new MachineSaleSubscriber(machineCollection, warningEvents);
+        const saleSubscriber2 = new MachineSaleSubscriber(machineCollection, warningEvents);
+        const refillSubscriber = new MachineRefillSubscriber(machineCollection, warningEvents);
+        const refillSubscriber2 = new MachineRefillSubscriber(machineCollection, warningEvents);
         const pubSubService = new MachinePublishSubscribeService();
 
         expect(pubSubService.getSubscriberCount()).toEqual(0)
@@ -207,9 +232,9 @@ describe('MachinePublishSubscribeService', () => {
 
     test('Should be able to publish MachineSaleEvent to subscribers', () => {
         const warningEvents = [];
-        const saleSubscriber1 = new MachineSaleSubscriber(machines, warningEvents);
-        const saleSubscriber2 = new MachineSaleSubscriber(machines, warningEvents);
-        const refillSubscriber = new MachineRefillSubscriber(machines, warningEvents);
+        const saleSubscriber1 = new MachineSaleSubscriber(machineCollection, warningEvents);
+        const saleSubscriber2 = new MachineSaleSubscriber(machineCollection, warningEvents);
+        const refillSubscriber = new MachineRefillSubscriber(machineCollection, warningEvents);
         const pubSubService = new MachinePublishSubscribeService();
         pubSubService.subscribe(EventType.Sale, saleSubscriber1)
         pubSubService.subscribe(EventType.Sale, saleSubscriber2)
@@ -229,11 +254,11 @@ describe('MachinePublishSubscribeService', () => {
 
     test('Should be able to publish MachineRefill to subscribers', () => {
         const warningEvents = [];
-        const saleSubscriber1 = new MachineSaleSubscriber(machines, warningEvents);
-        const saleSubscriber2 = new MachineSaleSubscriber(machines, warningEvents);
-        const refillSubscriber1 = new MachineRefillSubscriber(machines, warningEvents);
-        const refillSubscriber2 = new MachineRefillSubscriber(machines, warningEvents);
-        const refillSubscriber3 = new MachineRefillSubscriber(machines, warningEvents);
+        const saleSubscriber1 = new MachineSaleSubscriber(machineCollection, warningEvents);
+        const saleSubscriber2 = new MachineSaleSubscriber(machineCollection, warningEvents);
+        const refillSubscriber1 = new MachineRefillSubscriber(machineCollection, warningEvents);
+        const refillSubscriber2 = new MachineRefillSubscriber(machineCollection, warningEvents);
+        const refillSubscriber3 = new MachineRefillSubscriber(machineCollection, warningEvents);
         const pubSubService = new MachinePublishSubscribeService();
         pubSubService.subscribe(EventType.Sale, saleSubscriber1)
         pubSubService.subscribe(EventType.Sale, saleSubscriber2)
@@ -255,8 +280,8 @@ describe('MachinePublishSubscribeService', () => {
 
     test('The subscribers should be working off a shared array of Machine objects, mutating them depending on the event received.', () => {
         const warningEvents = [];
-        const saleSubscriber = new MachineSaleSubscriber(machines, warningEvents);
-        const refillSubscriber = new MachineRefillSubscriber(machines, warningEvents);
+        const saleSubscriber = new MachineSaleSubscriber(machineCollection, warningEvents);
+        const refillSubscriber = new MachineRefillSubscriber(machineCollection, warningEvents);
         const pubSubService = new MachinePublishSubscribeService();
         pubSubService.subscribe(EventType.Sale, saleSubscriber)
         pubSubService.subscribe(EventType.Refill, refillSubscriber)

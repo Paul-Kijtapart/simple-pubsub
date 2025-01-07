@@ -205,7 +205,11 @@ class MachinePublishSubscribeService implements IPublishSubscribeService {
   }
 
   getSubscriberInfo(): string {
-    return `MachineSaleSubscribersCount=${this.iSubscribers[EventType.Sale].length}, MachineRefillSubscriberCount=${this.iSubscribers[EventType.Refill].length}`
+    let res = 'Subscriber info: ';
+    for (let [eventType, subscribers] of Object.entries(this.iSubscribers)) {
+      res += `${eventType}=${subscribers.length}, `;
+    }
+    return res;
   }
 
   getSubscriberCount(): number {
@@ -336,6 +340,7 @@ async function main() {
   console.log('>>>> DONE')
 
   console.log(`>>>> Processing the warning events: ${warningEvents.length} events`)
+  console.log(pubSubService.getSubscriberInfo())
   for (let e of warningEvents) {
     console.log(`>> Applying Event: ${e.toString()}`)
     pubSubService.publish(e);

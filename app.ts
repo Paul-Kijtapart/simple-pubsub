@@ -125,12 +125,12 @@ abstract class BaseMachineSubscriber implements ISubscriber {
 }
 
 class MachineSaleSubscriber extends BaseMachineSubscriber {
-  public warningEvents: TMachineWarningEvent[];
+  private _warningEvents: TMachineWarningEvent[];
 
   constructor (machineCollection: MachineCollection, warningEvents: TMachineWarningEvent[]) {
     super(machineCollection);
 
-    this.warningEvents = warningEvents;
+    this._warningEvents = warningEvents;
   }
 
   handle(event: MachineSaleEvent): void {
@@ -140,7 +140,7 @@ class MachineSaleSubscriber extends BaseMachineSubscriber {
 
     // If a machine stock levels drops below 3, LowStockWarningEvent should be generated just once
     if (machine.stockLevel >= StockLevel.Ok && machine.stockLevel - soldQuantity < StockLevel.Ok) {
-      this.warningEvents.push(new MachineLowStockWarningEvent(event.machineId()))
+      this._warningEvents.push(new MachineLowStockWarningEvent(event.machineId()))
     }
 
     // stock level should never go negative. The stock level should be capped at 0
@@ -153,12 +153,12 @@ class MachineSaleSubscriber extends BaseMachineSubscriber {
 }
 
 class MachineRefillSubscriber extends BaseMachineSubscriber {
-  public warningEvents: TMachineWarningEvent[];
+  private _warningEvents: TMachineWarningEvent[];
 
   constructor(machineCollection: MachineCollection, warningEvents: TMachineWarningEvent[]) {
     super(machineCollection);
 
-    this.warningEvents = warningEvents;
+    this._warningEvents = warningEvents;
   }
 
   handle(event: MachineRefillEvent): void {
@@ -166,7 +166,7 @@ class MachineRefillSubscriber extends BaseMachineSubscriber {
 
     // When the stock level hits 3 or above, a StockLevelOkEvent should be generated just once
     if (machine.stockLevel < StockLevel.Ok && machine.stockLevel + event.getRefillQuantity() >= StockLevel.Ok) {
-      this.warningEvents.push(new MachineStockLevelOkEvent(event.machineId()))
+      this._warningEvents.push(new MachineStockLevelOkEvent(event.machineId()))
     }
 
     // assumption: there is no limit on the stock level
@@ -190,10 +190,10 @@ class MachineLowStockSubscriber extends BaseMachineSubscriber {
 
 // pubsub
 class MachinePublishSubscribeService implements IPublishSubscribeService {
-  public iSubscribers: EventTypeToSubscriberMap;
+  private _iSubscribers: EventTypeToSubscriberMap;
 
   constructor() {
-    this.iSubscribers = {
+    this._iSubscribers = {
       [EventType.Sale]: [],
       [EventType.Refill]: [],
       [EventType.Low]: [],
@@ -203,30 +203,30 @@ class MachinePublishSubscribeService implements IPublishSubscribeService {
 
   getSubscriberInfo(): string {
     let res = 'Subscriber info: ';
-    for (let [eventType, subscribers] of Object.entries(this.iSubscribers)) {
+    for (let [eventType, subscribers] of Object.entries(this._iSubscribers)) {
       res += `${eventType}=${subscribers.length}, `;
     }
     return res;
   }
 
   getSubscriberCount(): number {
-    return this.iSubscribers[EventType.Sale].length + this.iSubscribers[EventType.Refill].length;
+    return this._iSubscribers[EventType.Sale].length + this._iSubscribers[EventType.Refill].length;
   }
 
   publish(event: IEvent) {
     if (event.type() === EventType.Sale) {
       // Alert Only the Sale subscribers
-      const saleSubscirbers = this.iSubscribers[EventType.Sale]
+      const saleSubscirbers = this._iSubscribers[EventType.Sale]
       for (let s of saleSubscirbers) {
         s.handle(event)
       }
     } else if (event.type() === EventType.Refill) {
-      const refillSubscribers = this.iSubscribers[EventType.Refill]
+      const refillSubscribers = this._iSubscribers[EventType.Refill]
       for (let s of refillSubscribers) {
         s.handle(event)
       }
     } else if (event.type() === EventType.Low) {
-      const lowStockSubscribers = this.iSubscribers[EventType.Low]
+      const lowStockSubscribers = this._iSubscribers[EventType.Low]
       for (let s of lowStockSubscribers) {
         s.handle(event)
       }
@@ -237,13 +237,13 @@ class MachinePublishSubscribeService implements IPublishSubscribeService {
 
   subscribe(type: EventType, handler: ISubscriber) {
     // { 'sale' : [ saleSubscriber1, saleSubscriber2 ]
-    this.iSubscribers[type].push(handler)
+    this._iSubscribers[type].push(handler)
   }
 
   unsubscribe(type: EventType, handler: ISubscriber) {
-    const index = this.iSubscribers[type].indexOf(handler);
+    const index = this._iSubscribers[type].indexOf(handler);
     if (index > -1) {
-      this.iSubscribers[type].splice(index, 1);
+      this._iSubscribers[type].splice(index, 1);
     }
   }
 }

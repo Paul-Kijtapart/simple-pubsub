@@ -186,7 +186,7 @@ class MachineLowStockSubscriber extends BaseMachineSubscriber {
     // bring the stock level back to the default level when it hits the low threshold
     const machine = this.machines[event.machineId()];
     if (machine.stockLevel < StockLevel.Ok) {
-      machine.stockLevel = StockLevel.Default; // TODO: Add default to enum
+      machine.stockLevel = StockLevel.Default;
     }
   }
 }

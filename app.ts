@@ -2,6 +2,13 @@
 enum EventType {
   Sale = 'sale',
   Refill = 'refill',
+  Low = 'low',
+  Ok = 'ok'
+}
+
+enum StockLevel {
+  Ok = 3,  // threshold to generate warning events
+  Default = 10
 }
 
 // interfaces
@@ -84,6 +91,28 @@ class MachineRefillEvent extends BaseMachineEvent {
   }
 }
 
+class MachineLowStockWarningEvent extends BaseMachineEvent {
+  constructor(machineId: string) {
+    super(machineId);
+  }
+
+  type(): EventType {
+    return EventType.Low
+  }
+}
+
+class MachineStockLevelOkEvent extends BaseMachineEvent {
+  constructor(machineId: string) {
+    super(machineId);
+  }
+
+  type(): EventType {
+    return EventType.Ok;
+  }
+}
+
+type TMachineWarningEvent = MachineLowStockWarningEvent | MachineStockLevelOkEvent;
+
 // subscribers
 abstract class BaseMachineSubscriber implements ISubscriber {
   protected machines: MachineMap;
@@ -99,14 +128,23 @@ abstract class BaseMachineSubscriber implements ISubscriber {
 }
 
 class MachineSaleSubscriber extends BaseMachineSubscriber {
-  constructor (machines: Machine[]) {
+  public warningEvents: TMachineWarningEvent[];
+
+  constructor (machines: Machine[], warningEvents: TMachineWarningEvent[]) {
     super(machines);
+
+    this.warningEvents = warningEvents;
   }
 
   handle(event: MachineSaleEvent): void {
     // update the stock level of the machine associated with the machineId of the event
     const machine = this.machines[event.machineId()];
     const soldQuantity = event.getSoldQuantity();
+
+    // If a machine stock levels drops below 3, LowStockWarningEvent should be generated just once
+    if (machine.stockLevel >= StockLevel.Ok && machine.stockLevel - soldQuantity < StockLevel.Ok) {
+      this.warningEvents.push(new MachineLowStockWarningEvent(event.machineId()))
+    }
 
     // stock level should never go negative. The stock level should be capped at 0
     if (machine.stockLevel < soldQuantity) {
@@ -118,15 +156,38 @@ class MachineSaleSubscriber extends BaseMachineSubscriber {
 }
 
 class MachineRefillSubscriber extends BaseMachineSubscriber {
-  constructor(machines: Machine[]) {
+  public warningEvents: TMachineWarningEvent[];
+
+  constructor(machines: Machine[], warningEvents: TMachineWarningEvent[]) {
     super(machines);
+
+    this.warningEvents = warningEvents;
   }
 
   handle(event: MachineRefillEvent): void {
     const machine = this.machines[event.machineId()];
 
+    // When the stock level hits 3 or above, a StockLevelOkEvent should be generated just once
+    if (machine.stockLevel < StockLevel.Ok && machine.stockLevel + event.getRefillQuantity() >= StockLevel.Ok) {
+      this.warningEvents.push(new MachineStockLevelOkEvent(event.machineId()))
+    }
+
     // assumption: there is no limit on the stock level
     machine.stockLevel += event.getRefillQuantity();
+  }
+}
+
+class MachineLowStockSubscriber extends BaseMachineSubscriber {
+    constructor (machines: Machine[]) {
+      super(machines);
+    }
+
+  handle(event: MachineLowStockWarningEvent) {
+    // bring the stock level back to the default level when it hits the low threshold
+    const machine = this.machines[event.machineId()];
+    if (machine.stockLevel < StockLevel.Ok) {
+      machine.stockLevel = StockLevel.Default;
+    }
   }
 }
 
@@ -138,11 +199,17 @@ class MachinePublishSubscribeService implements IPublishSubscribeService {
     this.iSubscribers = {
       [EventType.Sale]: [],
       [EventType.Refill]: [],
+      [EventType.Low]: [],
+      [EventType.Ok]: [],
     };
   }
 
   getSubscriberInfo(): string {
-    return `MachineSaleSubscribersCount=${this.iSubscribers[EventType.Sale].length}, MachineRefillSubscriberCount=${this.iSubscribers[EventType.Refill].length}`
+    let res = 'Subscriber info: ';
+    for (let [eventType, subscribers] of Object.entries(this.iSubscribers)) {
+      res += `${eventType}=${subscribers.length}, `;
+    }
+    return res;
   }
 
   getSubscriberCount(): number {
@@ -159,6 +226,11 @@ class MachinePublishSubscribeService implements IPublishSubscribeService {
     } else if (event.type() === EventType.Refill) {
       const refillSubscribers = this.iSubscribers[EventType.Refill]
       for (let s of refillSubscribers) {
+        s.handle(event)
+      }
+    } else if (event.type() === EventType.Low) {
+      const lowStockSubscribers = this.iSubscribers[EventType.Low]
+      for (let s of lowStockSubscribers) {
         s.handle(event)
       }
     } else {
@@ -182,11 +254,12 @@ class MachinePublishSubscribeService implements IPublishSubscribeService {
 
 // objects
 class Machine {
-  public stockLevel = 10;
+  public stockLevel: number;
   public id: string;
 
-  constructor (id: string) {
+  constructor(id: string, stockLevel: number = StockLevel.Default) {
     this.id = id;
+    this.stockLevel = stockLevel;
   }
 
   toString(): string {
@@ -227,37 +300,53 @@ async function main() {
   // create 3 machines with a quantity of 10 stock
   const machines: Machine[] = [new Machine('001'), new Machine('002'), new Machine('003')];
 
+  // warning events to be generated by subscribers
+  const warningEvents: TMachineWarningEvent[] = [];
+
   // create a machine sale event subscriber. inject the machines (all subscribers should do this)
-  const saleSubscriber = new MachineSaleSubscriber(machines);
-  const saleSubscriber2 = new MachineSaleSubscriber(machines);
-  const saleSubscriber3 = new MachineSaleSubscriber(machines);
-  const refillSubscriber = new MachineRefillSubscriber(machines);
+  const saleSubscriber = new MachineSaleSubscriber(machines, warningEvents);
+  const saleSubscriber2 = new MachineSaleSubscriber(machines, warningEvents);
+  const saleSubscriber3 = new MachineSaleSubscriber(machines, warningEvents);
+  const saleSubscriber4 = new MachineSaleSubscriber(machines, warningEvents);
+  const refillSubscriber = new MachineRefillSubscriber(machines, warningEvents);
+  const lowStockSubscriber = new MachineLowStockSubscriber(machines);
 
   // create the PubSub service
   const pubSubService: MachinePublishSubscribeService = new MachinePublishSubscribeService(); // implement and fix this
+
+  // register different types of subscribers to the pub sub
   pubSubService.subscribe(EventType.Sale, saleSubscriber)
   pubSubService.subscribe(EventType.Sale, saleSubscriber2)
   pubSubService.subscribe(EventType.Sale, saleSubscriber3)
+  pubSubService.subscribe(EventType.Sale, saleSubscriber4)
   pubSubService.subscribe(EventType.Refill, refillSubscriber)
+  pubSubService.subscribe(EventType.Low, lowStockSubscriber)
 
   // create 5 random events
   const events = [1,2,3,4,5].map(i => eventGenerator());
 
-  // publish the events
-  console.log('>>>> INITIAL')
+  // display workflow
+  console.log(`>>>> Processing the initial list of events: ${events.length} events`)
   logMachines(machines);
   console.log(pubSubService.getSubscriberInfo())
 
   for (let e of events) {
     console.log(`>> Applying Event: ${e.toString()}`)
-
     pubSubService.publish(e);
-
     logMachines(machines);
     console.log('====')
   }
 
   console.log('>>>> DONE')
+
+  console.log(`>>>> Processing the warning events: ${warningEvents.length} events`)
+  console.log(pubSubService.getSubscriberInfo())
+  for (let e of warningEvents) {
+    console.log(`>> Applying Event: ${e.toString()}`)
+    pubSubService.publish(e);
+    logMachines(machines);
+    console.log('====')
+  }
 }
 
 export {
@@ -265,8 +354,12 @@ export {
   Machine,
   MachineSaleEvent,
   MachineRefillEvent,
+  MachineLowStockWarningEvent,
+  MachineStockLevelOkEvent,
   MachineSaleSubscriber,
   MachineRefillSubscriber,
+  MachineLowStockSubscriber,
   MachinePublishSubscribeService,
   EventType,
+  StockLevel,
 }

@@ -43,3 +43,5 @@ npm run test
 
 ## Some worth-noting edits on the given code
 * The handler method of the MachineSaleSubscriber is changed to work with the machine of the event it consumes. I believe the original fixed index does not make sense.
+* The implementation for part3 can be found on the branch `part1`
+* To see changes for each part, please see the branch dropdown
